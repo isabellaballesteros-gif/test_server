@@ -612,6 +612,11 @@
             if (typeof io !== 'undefined') {
                 socket = io();
                 setupSocketListeners();
+                
+                // Also set up listeners immediately in case socket connects quickly
+                socket.on('connect', () => {
+                    setupMessageInputListeners();
+                });
             } else {
                 // Retry if Socket.IO hasn't loaded yet
                 setTimeout(initializeSocket, 100);
@@ -629,8 +634,6 @@
                     statusEl.textContent = '✓ Connected';
                     statusEl.style.color = '#90EE90';
                 }
-                // Setup message input event listeners after connection
-                setupMessageInputListeners();
             });
             
             socket.on('disconnect', () => {
@@ -687,14 +690,18 @@
                     if (e.key === 'Enter') {
                         sendMessage();
                     } else {
-                        if (socket && username) {
-                            socket.emit('typing', { username: username, isTyping: true });
-                            clearTimeout(typingTimeout);
-                            typingTimeout = setTimeout(() => {
-                                if (socket && username) {
-                                    socket.emit('typing', { username: username, isTyping: false });
-                                }
-                            }, 1000);
+                        if (socket && socket.connected && username) {
+                            try {
+                                socket.emit('typing', { username: username, isTyping: true });
+                                clearTimeout(typingTimeout);
+                                typingTimeout = setTimeout(() => {
+                                    if (socket && socket.connected && username) {
+                                        socket.emit('typing', { username: username, isTyping: false });
+                                    }
+                                }, 1000);
+                            } catch (error) {
+                                console.error('Error sending typing indicator:', error);
+                            }
                         }
                     }
                 });
@@ -834,7 +841,17 @@
         // Send message
         function sendMessage() {
             if (!socket) {
+                alert('Connection not ready. Please wait a moment and try again.');
                 console.error('Socket not initialized yet');
+                // Try to initialize socket again
+                initializeSocket();
+                return;
+            }
+            
+            // Check if socket is connected
+            if (!socket.connected) {
+                alert('Not connected to server. Please wait for connection...');
+                console.error('Socket not connected');
                 return;
             }
             
@@ -842,13 +859,20 @@
             const message = input.value.trim();
             
             if (message && username) {
-                socket.emit('message', {
-                    username: username,
-                    avatar: selectedAvatar,
-                    message: message
-                });
-                input.value = '';
-                socket.emit('typing', { username: username, isTyping: false });
+                try {
+                    socket.emit('message', {
+                        username: username,
+                        avatar: selectedAvatar,
+                        message: message
+                    });
+                    input.value = '';
+                    socket.emit('typing', { username: username, isTyping: false });
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    alert('Error sending message. Please try again.');
+                }
+            } else if (!username) {
+                alert('Please enter a username first.');
             }
         }
         
