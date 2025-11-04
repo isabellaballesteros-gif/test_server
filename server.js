@@ -9,10 +9,13 @@ const server = http.createServer(app);
 
 // Configure Socket.IO to allow connections from any origin
 const io = socketIo(server, {
+    path: '/socket.io/',
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-    }
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling']
 });
 
 const PORT = process.env.PORT || 3000;
@@ -21,11 +24,11 @@ const HOST = '0.0.0.0'; // Listen on all network interfaces
 // Store messages in memory (in a real app, you'd use a database)
 const messages = [];
 
-// Serve static files from the 'public' directory
-app.use(express.static('public'));
-
 // Parse JSON bodies
 app.use(express.json());
+
+// Serve static files from the 'public' directory
+app.use(express.static('public'));
 
 // Route for the home page
 app.get('/', (req, res) => {

@@ -583,10 +583,83 @@
     
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
+        // Initialize variables first
         let username = '';
         let selectedAvatar = '👤';
         let typingTimeout;
+        let socket = null;
+        
+        // Initialize Socket.IO after the script loads
+        function initializeSocket() {
+            if (typeof io !== 'undefined') {
+                socket = io();
+                setupSocketListeners();
+            } else {
+                // Retry if Socket.IO hasn't loaded yet
+                setTimeout(initializeSocket, 100);
+            }
+        }
+        
+        // Setup socket event listeners
+        function setupSocketListeners() {
+            if (!socket) return;
+            
+            // Connection status
+            socket.on('connect', () => {
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '✓ Connected';
+                    statusEl.style.color = '#90EE90';
+                }
+            });
+            
+            socket.on('disconnect', () => {
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '✗ Disconnected';
+                    statusEl.style.color = '#ff6b6b';
+                }
+            });
+            
+            // Load message history
+            socket.on('messageHistory', (messages) => {
+                messages.forEach(msg => displayMessage(msg));
+                scrollToBottom();
+            });
+            
+            // Receive new messages
+            socket.on('newMessage', (message) => {
+                displayMessage(message);
+                scrollToBottom();
+            });
+            
+            // Typing indicator
+            socket.on('userTyping', (data) => {
+                let typingDiv = document.getElementById('typingIndicator');
+                if (!typingDiv) {
+                    typingDiv = document.createElement('div');
+                    typingDiv.id = 'typingIndicator';
+                    typingDiv.className = 'typing-indicator';
+                    const messagesDiv = document.getElementById('chatMessages');
+                    if (messagesDiv) {
+                        messagesDiv.appendChild(typingDiv);
+                    }
+                }
+                
+                if (data.isTyping) {
+                    typingDiv.textContent = `${data.username} is typing...`;
+                } else {
+                    typingDiv.remove();
+                }
+            });
+        }
+        
+        // Start Socket.IO initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSocket);
+        } else {
+            initializeSocket();
+        }
         
         // Emoji collections
         const emojiCategories = {
@@ -617,46 +690,6 @@
         
         // Initialize emoji grids on page load
         populateEmojiGrids();
-        
-        // Connection status
-        socket.on('connect', () => {
-            document.getElementById('connectionStatus').textContent = '✓ Connected';
-            document.getElementById('connectionStatus').style.color = '#90EE90';
-        });
-        
-        socket.on('disconnect', () => {
-            document.getElementById('connectionStatus').textContent = '✗ Disconnected';
-            document.getElementById('connectionStatus').style.color = '#ff6b6b';
-        });
-        
-        // Load message history
-        socket.on('messageHistory', (messages) => {
-            messages.forEach(msg => displayMessage(msg));
-            scrollToBottom();
-        });
-        
-        // Receive new messages
-        socket.on('newMessage', (message) => {
-            displayMessage(message);
-            scrollToBottom();
-        });
-        
-        // Typing indicator
-        socket.on('userTyping', (data) => {
-            let typingDiv = document.getElementById('typingIndicator');
-            if (!typingDiv) {
-                typingDiv = document.createElement('div');
-                typingDiv.id = 'typingIndicator';
-                typingDiv.className = 'typing-indicator';
-                document.getElementById('chatMessages').appendChild(typingDiv);
-            }
-            
-            if (data.isTyping) {
-                typingDiv.textContent = `${data.username} is typing...`;
-            } else {
-                typingDiv.remove();
-            }
-        });
         
         // Toggle avatar selector
         function toggleAvatarSelector() {
@@ -695,6 +728,11 @@
         
         // Send message
         function sendMessage() {
+            if (!socket) {
+                console.error('Socket not initialized yet');
+                return;
+            }
+            
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
