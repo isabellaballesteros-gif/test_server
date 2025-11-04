@@ -2,12 +2,21 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const os = require('os');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+
+// Configure Socket.IO to allow connections from any origin
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 // Store messages in memory (in a real app, you'd use a database)
 const messages = [];
@@ -72,9 +81,42 @@ io.on('connection', (socket) => {
     });
 });
 
+// Get network IP addresses
+function getNetworkIPs() {
+    const interfaces = os.networkInterfaces();
+    const addresses = [];
+    
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal (loopback) and non-IPv4 addresses
+            if (iface.family === 'IPv4' && !iface.internal) {
+                addresses.push(iface.address);
+            }
+        }
+    }
+    
+    return addresses;
+}
+
 // Start the server
-server.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    console.log(`Press Ctrl+C to stop the server`);
+server.listen(PORT, HOST, () => {
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`Server is running!`);
+    console.log(`${'='.repeat(60)}`);
+    console.log(`\nLocal access:`);
+    console.log(`  http://localhost:${PORT}`);
+    
+    const networkIPs = getNetworkIPs();
+    if (networkIPs.length > 0) {
+        console.log(`\nNetwork access (from other devices):`);
+        networkIPs.forEach(ip => {
+            console.log(`  http://${ip}:${PORT}`);
+        });
+    } else {
+        console.log(`\nNetwork IP address not found. Make sure you're connected to a network.`);
+    }
+    
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`Press Ctrl+C to stop the server\n`);
 });
 
