@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        
+        .chat-header .status {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .username-setup {
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        
+        .username-setup input {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 25px;
+            font-size: 1em;
+            width: 250px;
+            margin-right: 10px;
+        }
+        
+        .username-setup button {
+            padding: 10px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .username-setup button:hover {
+            transform: scale(1.05);
+        }
+        
+        .avatar-section {
+            margin: 15px 0;
+        }
+        
+        .avatar-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .selected-avatar {
+            font-size: 2.5em;
+            margin: 10px 0;
+            display: inline-block;
+            padding: 10px;
+            background: white;
+            border-radius: 50%;
+            border: 3px solid #667eea;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .selected-avatar:hover {
+            transform: scale(1.1);
+        }
+        
+        .avatar-selector {
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin: 10px auto;
+            border: 2px solid #667eea;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 100;
+        }
+        
+        .avatar-selector.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        .avatar-category {
+            margin-bottom: 15px;
+        }
+        
+        .avatar-category-title {
+            font-size: 0.85em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        
+        .avatar-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+            gap: 8px;
+            margin-bottom: 15px;
+            min-height: 50px;
+        }
+        
+        .avatar-emoji {
+            font-size: 1.8em;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-align: center;
+            background: #f8f9fa;
+            border: 2px solid transparent;
+            user-select: none;
+            -webkit-user-select: none;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .avatar-emoji:hover {
+            background: #667eea;
+            transform: scale(1.15);
+            border-color: #764ba2;
+        }
+        
+        .avatar-emoji:active {
+            transform: scale(1.05);
+        }
+        
+        .message-avatar {
+            font-size: 1.5em;
+            margin-right: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Android Emoji", "EmojiSymbols", "EmojiOne Mozilla", "Twemoji Mozilla", "Segoe UI Symbol", sans-serif;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .message-username {
+            font-weight: bold;
+            color: #667eea;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .message-time {
+            font-size: 0.8em;
+            color: #999;
+        }
+        
+        .message-content {
+            background: white;
+            padding: 12px 15px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            word-wrap: break-word;
+        }
+        
+        .typing-indicator {
+            padding: 10px 20px;
+            font-style: italic;
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .chat-input-area {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input-container input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input-container input:focus {
+            border-color: #667eea;
+        }
+        
+        .chat-input-container button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .chat-input-container button:hover {
+            transform: scale(1.05);
+        }
+        
+        .chat-input-container button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .connected-users {
+            font-size: 0.85em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .theme-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        
+        .theme-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .theme-dropdown {
+            position: absolute;
+            top: 40px;
+            right: 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            min-width: 180px;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .theme-dropdown.show {
+            display: block;
+        }
+        
+        .theme-option {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .theme-option:last-child {
+            border-bottom: none;
+        }
+        
+        .theme-option:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Theme Styles */
+        body.theme-default {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        body.theme-blackwhite {
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #4a4a4a 100%);
+        }
+        
+        body.theme-blackwhite .chat-container {
+            background: #ffffff;
+            border: 2px solid #000000;
+        }
+        
+        body.theme-blackwhite .chat-header {
+            background: linear-gradient(135deg, #000000 0%, #2c2c2c 100%);
+        }
+        
+        body.theme-blackwhite .message-content {
+            background: #f5f5f5;
+            border: 1px solid #000000;
+            color: #000000;
+        }
+        
+        body.theme-neon {
+            background: linear-gradient(45deg, 
+                #ff006e 0%, 
+                #fb5607 14%, 
+                #ffbe0b 28%, 
+                #8338ec 42%, 
+                #3a86ff 56%, 
+                #06ffa5 70%, 
+                #ff006e 84%, 
+                #fb5607 100%);
+            background-size: 400% 400%;
+            animation: neonShift 10s ease infinite;
+        }
+        
+        @keyframes neonShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        body.theme-neon .chat-container {
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+        
+        body.theme-neon .chat-header {
+            background: linear-gradient(135deg, #ff006e 0%, #8338ec 100%);
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.8);
+        }
+        
+        body.theme-neon .message-username {
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        body.theme-neon .message-content {
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        body.theme-cats {
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            background-image: 
+                url('https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&h=200&fit=crop'),
+                url('https://images.unsplash.com/photo-1574158622682-e40e69881006?w=200&h=200&fit=crop'),
+                url('https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=200&h=200&fit=crop');
+            background-size: 150px 150px, 120px 120px, 180px 180px;
+            background-position: 0% 0%, 50% 50%, 100% 100%;
+            background-repeat: no-repeat;
+            animation: catFloat 20s ease-in-out infinite;
+        }
+        
+        @keyframes catFloat {
+            0%, 100% { background-position: 0% 0%, 50% 50%, 100% 100%; }
+            50% { background-position: 100% 100%, 0% 0%, 50% 50%; }
+        }
+        
+        body.theme-cats .chat-container {
+            background: rgba(255, 253, 245, 0.95);
+            border: 3px solid #ff8c42;
+        }
+        
+        body.theme-cats .chat-header {
+            background: linear-gradient(135deg, #ff8c42 0%, #ff6b6b 100%);
+        }
+        
+        body.theme-cats .message-username {
+            color: #ff8c42;
+        }
+        
+        body.theme-dogs {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            background-image: 
+                url('https://images.unsplash.com/photo-1552053831-71594a27632d?w=200&h=200&fit=crop'),
+                url('https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=200&h=200&fit=crop'),
+                url('https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?w=200&h=200&fit=crop');
+            background-size: 160px 160px, 140px 140px, 170px 170px;
+            background-position: 10% 10%, 60% 60%, 90% 90%;
+            background-repeat: no-repeat;
+            animation: dogFloat 25s ease-in-out infinite;
+        }
+        
+        @keyframes dogFloat {
+            0%, 100% { background-position: 10% 10%, 60% 60%, 90% 90%; }
+            50% { background-position: 90% 90%, 10% 10%, 60% 60%; }
+        }
+        
+        body.theme-dogs .chat-container {
+            background: rgba(255, 248, 240, 0.95);
+            border: 3px solid #8b4513;
+        }
+        
+        body.theme-dogs .chat-header {
+            background: linear-gradient(135deg, #8b4513 0%, #cd853f 100%);
+        }
+        
+        body.theme-dogs .message-username {
+            color: #8b4513;
+        }
+        
+        body.theme-thanksgiving {
+            background: linear-gradient(135deg, #d2691e 0%, #8b4513 50%, #daa520 100%);
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255, 140, 0, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 69, 19, 0.3) 0%, transparent 50%);
+        }
+        
+        body.theme-thanksgiving .chat-container {
+            background: rgba(255, 248, 240, 0.95);
+            border: 3px solid #8b4513;
+        }
+        
+        body.theme-thanksgiving .chat-header {
+            background: linear-gradient(135deg, #d2691e 0%, #8b4513 100%);
+        }
+        
+        body.theme-thanksgiving .message-username {
+            color: #d2691e;
+        }
+        
+        body.theme-thanksgiving .message-content {
+            background: #fff8f0;
+            border: 1px solid #daa520;
+        }
+        
+        body.theme-christmas {
+            background: linear-gradient(135deg, #dc143c 0%, #228b22 50%, #ffffff 100%);
+            background-image: 
+                radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 70% 80%, rgba(220, 20, 60, 0.2) 0%, transparent 40%);
+            animation: christmasTwinkle 3s ease-in-out infinite;
+        }
+        
+        @keyframes christmasTwinkle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.95; }
+        }
+        
+        body.theme-christmas .chat-container {
+            background: rgba(255, 255, 255, 0.95);
+            border: 3px solid #dc143c;
+            box-shadow: 0 0 20px rgba(220, 20, 60, 0.3);
+        }
+        
+        body.theme-christmas .chat-header {
+            background: linear-gradient(135deg, #dc143c 0%, #228b22 100%);
+            box-shadow: 0 0 15px rgba(220, 20, 60, 0.5);
+        }
+        
+        body.theme-christmas .message-username {
+            color: #dc143c;
+        }
+        
+        body.theme-christmas .message-content {
+            background: #fff;
+            border: 2px solid #228b22;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header" style="position: relative;">
+            <div class="theme-selector">
+                <button class="theme-button" onclick="toggleThemeDropdown()">🎨 Themes</button>
+                <div class="theme-dropdown" id="themeDropdown">
+                    <div class="theme-option" onclick="changeTheme('default')">Default</div>
+                    <div class="theme-option" onclick="changeTheme('blackwhite')">Black & White</div>
+                    <div class="theme-option" onclick="changeTheme('neon')">Neon Rainbow</div>
+                    <div class="theme-option" onclick="changeTheme('cats')">🐱 Cats</div>
+                    <div class="theme-option" onclick="changeTheme('dogs')">🐶 Dogs</div>
+                    <div class="theme-option" onclick="changeTheme('thanksgiving')">🦃 Thanksgiving</div>
+                    <div class="theme-option" onclick="changeTheme('christmas')">🎄 Christmas</div>
+                </div>
+            </div>
+            <h1>💬 Chat Server</h1>
+            <div class="status" id="connectionStatus">Connecting...</div>
+            <div class="connected-users" id="userCount"></div>
+        </div>
+        
+        <div class="username-setup" id="usernameSetup">
+            <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
+            <div class="avatar-section">
+                <label class="avatar-label">Choose your avatar:</label>
+                <div class="selected-avatar" id="selectedAvatar" onclick="toggleAvatarSelector()">👤</div>
+                <div class="avatar-selector" id="avatarSelector">
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">😀 Smileys & People</div>
+                        <div class="avatar-grid" id="smileys"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">🐶 Animals & Nature</div>
+                        <div class="avatar-grid" id="animals"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">🍕 Food & Drink</div>
+                        <div class="avatar-grid" id="food"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">⚽ Activities & Sports</div>
+                        <div class="avatar-grid" id="activities"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">🚗 Travel & Places</div>
+                        <div class="avatar-grid" id="travel"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">💎 Objects & Symbols</div>
+                        <div class="avatar-grid" id="objects"></div>
+                    </div>
+                    <div class="avatar-category">
+                        <div class="avatar-category-title">🎨 Flags & More</div>
+                        <div class="avatar-grid" id="flags"></div>
+                    </div>
+                </div>
+            </div>
+            <button onclick="setUsername()">Join Chat</button>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages"></div>
+        
+        <div class="chat-input-area hidden" id="chatInputArea">
+            <div class="chat-input-container">
+                <input type="text" id="messageInput" placeholder="Type your message..." maxlength="500">
+                <button onclick="sendMessage()" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Initialize variables first
+        let username = '';
+        let selectedAvatar = '👤';
+        let typingTimeout;
+        let socket = null;
+        
+        // Initialize Socket.IO after the script loads
+        function initializeSocket() {
+            if (typeof io !== 'undefined') {
+                socket = io();
+                setupSocketListeners();
+            } else {
+                // Retry if Socket.IO hasn't loaded yet
+                setTimeout(initializeSocket, 100);
+            }
+        }
+        
+        // Setup socket event listeners
+        function setupSocketListeners() {
+            if (!socket) return;
+            
+            // Connection status
+            socket.on('connect', () => {
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '✓ Connected';
+                    statusEl.style.color = '#90EE90';
+                }
+            });
+            
+            socket.on('disconnect', () => {
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '✗ Disconnected';
+                    statusEl.style.color = '#ff6b6b';
+                }
+            });
+            
+            // Load message history
+            socket.on('messageHistory', (messages) => {
+                messages.forEach(msg => displayMessage(msg));
+                scrollToBottom();
+            });
+            
+            // Receive new messages
+            socket.on('newMessage', (message) => {
+                displayMessage(message);
+                scrollToBottom();
+            });
+            
+            // Typing indicator
+            socket.on('userTyping', (data) => {
+                let typingDiv = document.getElementById('typingIndicator');
+                if (!typingDiv) {
+                    typingDiv = document.createElement('div');
+                    typingDiv.id = 'typingIndicator';
+                    typingDiv.className = 'typing-indicator';
+                    const messagesDiv = document.getElementById('chatMessages');
+                    if (messagesDiv) {
+                        messagesDiv.appendChild(typingDiv);
+                    }
+                }
+                
+                if (data.isTyping) {
+                    typingDiv.textContent = `${data.username} is typing...`;
+                } else {
+                    typingDiv.remove();
+                }
+            });
+        }
+        
+        // Start Socket.IO initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSocket);
+        } else {
+            initializeSocket();
+        }
+        
+        // Emoji collections
+        const emojiCategories = {
+            smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐', '👶', '👧', '🧒', '👦', '👩', '🧑', '👨', '👵', '🧓', '👴', '👮', '👷', '💂', '🕵️', '👩‍⚕️', '👨‍⚕️', '👩‍🌾', '👨‍🌾', '👩‍🍳', '👨‍🍳', '👩‍🎓', '👨‍🎓', '👩‍🎤', '👨‍🎤', '👩‍🏫', '👨‍🏫', '👩‍🏭', '👨‍🏭', '👩‍💻', '👨‍💻', '👩‍💼', '👨‍💼', '👩‍🔧', '👨‍🔧', '👩‍🔬', '👨‍🔬', '👩‍🎨', '👨‍🎨', '👩‍🚒', '👨‍🚒', '👩‍✈️', '👨‍✈️', '👩‍🚀', '👨‍🚀', '👩‍⚖️', '👨‍⚖️', '🤶', '🎅', '👸', '🤴', '👰', '🤵', '👼', '🤰', '🙇', '🙅', '🙆', '🙋', '🤦', '🤷', '🙎', '🙍', '💇', '💆', '🧖', '🧗', '🏃', '🏃‍♀️', '🏃‍♂️', '🚶', '🚶‍♀️', '🚶‍♂️', '💃', '🕺', '🕴️', '👯', '👯‍♀️', '👯‍♂️', '🧘', '🧘‍♀️', '🧘‍♂️', '🛀', '🛌', '👭', '👫', '👬', '💏', '💑', '👪', '👨‍👩‍👧', '👨‍👩‍👧‍👦', '👨‍👩‍👦‍👦', '👨‍👩‍👧‍👧', '👩‍👩‍👦', '👩‍👩‍👧', '👩‍👩‍👧‍👦', '👩‍👩‍👦‍👦', '👩‍👩‍👧‍👧', '👨‍👨‍👦', '👨‍👨‍👧', '👨‍👨‍👧‍👦', '👨‍👨‍👦‍👦', '👨‍👨‍👧‍👧', '👩‍👦', '👩‍👧', '👩‍👧‍👦', '👩‍👦‍👦', '👩‍👧‍👧', '👨‍👦', '👨‍👧', '👨‍👧‍👦', '👨‍👦‍👦', '👨‍👧‍👧', '👋', '🤚', '🖐', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋', '💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💯', '💢', '💥', '💫', '💦', '💨', '🕳️', '💣', '💬', '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤'],
+            animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦤', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔', '🌲', '🌳', '🌴', '🌵', '🌶️', '🌷', '🌺', '🌻', '🌼', '🌽', '🌾', '🌿', '🍀', '🍁', '🍂', '🍃', '🍄', '🥀', '🌰', '🌱', '🌿', '☘️', '🍀', '🍃', '🌾', '🌺', '🌻', '🌹', '🌷', '🌼', '🌸', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍃', '🌱', '🌿', '🌳', '🌲', '🌴', '🌵'],
+            food: ['🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🥞', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🥪', '🥙', '🌮', '🌯', '🥗', '🥘', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯', '🥛', '🍼', '☕️', '🍵', '🧃', '🥤', '🍶', '🍺', '🍻', '🥂', '🍷', '🥃', '🍸', '🍹', '🧉', '🍾', '🧊'],
+            activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🏓', '🏸', '🥅', '🏒', '🏑', '🏏', '🥍', '🏹', '🎣', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏄', '🏊', '🤽', '🚣', '🧗', '🚵', '🚴', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🏵️', '🎗️', '🎫', '🎟️', '🎪', '🤹', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩', '🃏', '🀄', '🎴'],
+            travel: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🚁', '🚟', '🚠', '🚡', '🛰️', '🚀', '🛸', '⚓', '⛵', '🛥️', '🛳️', '⛴️', '🚤', '🛶', '🚣', '🧗', '🏔️', '⛰️', '🌋', '🗻', '🏕️', '🏖️', '🏜️', '🏝️', '🏞️', '🏟️', '🏛️', '🏗️', '🧱', '🏘️', '🏚️', '🏠', '🏡', '🏢', '🏣', '🏤', '🏥', '🏦', '🏨', '🏩', '🏪', '🏫', '🏬', '🏭', '🏯', '🏰', '🗼', '🗽', '⛪', '🕌', '🛕', '🕍', '⛩️', '🕋', '⛲', '⛺', '🌁', '🌃', '🏙️', '🌄', '🌅', '🌆', '🌇', '🌉', '♨️', '🎠', '🎡', '🎢', '💈', '🎪', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘', '🚙', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉'],
+            objects: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🪁', '🪀', '🏮', '🎊', '🎉', '🎎', '🎐', '🎌', '🏮', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗂️', '📒', '📓', '📔', '📕', '📖', '📗', '📘', '📙', '📚', '📓', '📒', '📃', '📜', '📰', '🗞️', '📄', '📑', '🔖', '🏷️', '💰', '💴', '💵', '💶', '💷', '💸', '💳', '🧾', '💹', '✉️', '📧', '📨', '📩', '📤', '📥', '📦', '📫', '📪', '📬', '📭', '📮', '🗳️', '✏️', '✒️', '🖊️', '🖋️', '🖍️', '🖌️', '🖌️', '🖍️', '🖊️', '🖋️', '✏️', '✒️', '📝', '💼', '📁', '📂', '🗂️', '📅', '📆', '🗒️', '🗓️', '📇', '📈', '📉', '📊', '📋', '📌', '📍', '📎', '🖇️', '📏', '📐', '✂️', '🗃️', '🗄️', '🗑️', '🔒', '🔓', '🔏', '🔐', '🔑', '🗝️', '🔨', '🪓', '⛏️', '⚒️', '🛠️', '🪚', '🔧', '🪛', '🔩', '⚙️', '🧰', '🧲', '⛓️', '🪝', '🧯', '🛢️', '🧴', '🧽', '🧹', '🪣', '🧺', '🪤', '🪀', '🪁', '🧸', '🪆', '🪅', '🪡', '🧵', '🧶', '🧷', '🪢', '🪡', '🧵', '🧶', '🧷', '🪢', '🪚', '🪛', '🔩', '⚙️', '🧰', '🧲', '⛓️', '🪝', '🧯', '🛢️', '🧴', '🧽', '🧹', '🪣', '🧺', '🪤', '🪀', '🪁', '🧸', '🪆', '🪅', '🪡', '🧵', '🧶', '🧷', '🪢'],
+            flags: ['🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏳️‍⚧️', '🇺🇳', '🇦🇫', '🇦🇽', '🇦🇱', '🇩🇿', '🇦🇸', '🇦🇩', '🇦🇴', '🇦🇮', '🇦🇶', '🇦🇬', '🇦🇷', '🇦🇲', '🇦🇼', '🇦🇺', '🇦🇹', '🇦🇿', '🇧🇸', '🇧🇭', '🇧🇩', '🇧🇧', '🇧🇾', '🇧🇪', '🇧🇿', '🇧🇯', '🇧🇲', '🇧🇹', '🇧🇴', '🇧🇦', '🇧🇼', '🇧🇷', '🇮🇴', '🇻🇬', '🇧🇳', '🇧🇬', '🇧🇫', '🇧🇮', '🇰🇭', '🇨🇲', '🇨🇦', '🇮🇶', '🇨🇻', '🇰🇾', '🇨🇫', '🇹🇩', '🇨🇱', '🇨🇳', '🇨🇽', '🇨🇨', '🇨🇴', '🇰🇲', '🇨🇬', '🇨🇩', '🇨🇰', '🇨🇷', '🇭🇷', '🇨🇺', '🇨🇼', '🇨🇾', '🇨🇿', '🇩🇰', '🇩🇯', '🇩🇲', '🇩🇴', '🇪🇨', '🇪🇬', '🇸🇻', '🇬🇶', '🇪🇷', '🇪🇪', '🇪🇹', '🇫🇰', '🇫🇴', '🇫🇯', '🇫🇮', '🇫🇷', '🇬🇫', '🇵🇫', '🇹🇫', '🇬🇦', '🇬🇲', '🇬🇪', '🇩🇪', '🇬🇭', '🇬🇮', '🇬🇷', '🇬🇱', '🇬🇩', '🇬🇵', '🇬🇺', '🇬🇹', '🇬🇬', '🇬🇳', '🇬🇼', '🇬🇾', '🇭🇹', '🇭🇳', '🇭🇰', '🇭🇺', '🇮🇸', '🇮🇳', '🇮🇩', '🇮🇷', '🇮🇶', '🇮🇪', '🇮🇲', '🇮🇱', '🇮🇹', '🇨🇮', '🇯🇲', '🇯🇵', '🇯🇪', '🇯🇴', '🇰🇿', '🇰🇪', '🇰🇮', '🇽🇰', '🇰🇼', '🇰🇬', '🇱🇦', '🇱🇻', '🇱🇧', '🇱🇸', '🇱🇷', '🇱🇾', '🇱🇮', '🇱🇹', '🇱🇺', '🇲🇴', '🇲🇰', '🇲🇬', '🇲🇼', '🇲🇾', '🇲🇻', '🇲🇱', '🇲🇹', '🇲🇭', '🇲🇶', '🇲🇷', '🇲🇺', '🇾🇹', '🇲🇽', '🇫🇲', '🇲🇩', '🇲🇨', '🇲🇳', '🇲🇪', '🇲🇸', '🇲🇦', '🇲🇿', '🇲🇲', '🇳🇦', '🇳🇷', '🇳🇵', '🇳🇱', '🇳🇨', '🇳🇿', '🇳🇮', '🇳🇪', '🇳🇬', '🇳🇺', '🇳🇫', '🇰🇵', '🇲🇵', '🇳🇴', '🇴🇲', '🇵🇰', '🇵🇼', '🇵🇸', '🇵🇦', '🇵🇬', '🇵🇾', '🇵🇪', '🇵🇭', '🇵🇳', '🇵🇱', '🇵🇹', '🇵🇷', '🇶🇦', '🇷🇪', '🇷🇴', '🇷🇺', '🇷🇼', '🇧🇱', '🇸🇭', '🇰🇳', '🇱🇨', '🇵🇲', '🇻🇨', '🇼🇸', '🇸🇲', '🇸🇹', '🇸🇦', '🇸🇳', '🇷🇸', '🇸🇨', '🇸🇱', '🇸🇬', '🇸🇽', '🇸🇰', '🇸🇮', '🇬🇸', '🇸🇧', '🇸🇴', '🇿🇦', '🇰🇷', '🇸🇸', '🇪🇸', '🇱🇰', '🇸🇩', '🇸🇷', '🇸🇿', '🇸🇪', '🇨🇭', '🇸🇾', '🇹🇼', '🇹🇯', '🇹🇿', '🇹🇭', '🇹🇱', '🇹🇬', '🇹🇰', '🇹🇴', '🇹🇹', '🇹🇳', '🇹🇷', '🇹🇲', '🇹🇨', '🇹🇻', '🇺🇬', '🇺🇦', '🇦🇪', '🇬🇧', '🇺🇸', '🇺🇾', '🇺🇿', '🇻🇺', '🇻🇦', '🇻🇪', '🇻🇳', '🇻🇮', '🇼🇫', '🇪🇭', '🇾🇪', '🇿🇲', '🇿🇼']
+        };
+        
+        // Populate emoji grids
+        function populateEmojiGrids() {
+            try {
+                Object.keys(emojiCategories).forEach(category => {
+                    const grid = document.getElementById(category);
+                    if (grid) {
+                        // Clear any existing content
+                        grid.innerHTML = '';
+                        // Get unique emojis (remove duplicates)
+                        const uniqueEmojis = [...new Set(emojiCategories[category])];
+                        uniqueEmojis.forEach(emoji => {
+                            if (emoji && emoji.trim()) {
+                                const emojiDiv = document.createElement('div');
+                                emojiDiv.className = 'avatar-emoji';
+                                emojiDiv.textContent = emoji;
+                                emojiDiv.onclick = (e) => {
+                                    e.stopPropagation(); // Prevent event bubbling
+                                    selectAvatar(emoji);
+                                };
+                                grid.appendChild(emojiDiv);
+                            }
+                        });
+                    } else {
+                        console.warn('Grid not found for category:', category);
+                    }
+                });
+                console.log('Emoji grids populated successfully');
+            } catch (error) {
+                console.error('Error populating emoji grids:', error);
+            }
+        }
+        
+        // Initialize emoji grids when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', populateEmojiGrids);
+        } else {
+            // DOM is already ready
+            populateEmojiGrids();
+        }
+        
+        // Toggle avatar selector
+        function toggleAvatarSelector() {
+            const selector = document.getElementById('avatarSelector');
+            if (selector) {
+                selector.classList.toggle('show');
+                // Make sure emoji grids are populated when opening
+                if (selector.classList.contains('show')) {
+                    // Double-check grids are populated
+                    setTimeout(() => {
+                        const grids = selector.querySelectorAll('.avatar-grid');
+                        let totalEmojis = 0;
+                        grids.forEach(grid => {
+                            totalEmojis += grid.children.length;
+                        });
+                        if (totalEmojis === 0) {
+                            console.log('Grids empty, repopulating...');
+                            populateEmojiGrids();
+                        }
+                    }, 100);
+                }
+            }
+        }
+        
+        // Select avatar
+        function selectAvatar(emoji) {
+            if (!emoji) return;
+            selectedAvatar = emoji;
+            const selectedAvatarEl = document.getElementById('selectedAvatar');
+            if (selectedAvatarEl) {
+                selectedAvatarEl.textContent = emoji;
+            }
+            const selector = document.getElementById('avatarSelector');
+            if (selector) {
+                selector.classList.remove('show');
+            }
+            // Save to localStorage
+            localStorage.setItem('userAvatar', emoji);
+            console.log('Avatar selected:', emoji);
+        }
+        
+        // Load saved avatar
+        const savedAvatar = localStorage.getItem('userAvatar');
+        if (savedAvatar) {
+            selectedAvatar = savedAvatar;
+            document.getElementById('selectedAvatar').textContent = savedAvatar;
+        }
+        
+        // Set username and join chat
+        function setUsername() {
+            const input = document.getElementById('usernameInput');
+            const name = input.value.trim();
+            
+            if (name) {
+                username = name;
+                // Ensure avatar is set (use default if not selected)
+                if (!selectedAvatar) {
+                    selectedAvatar = '👤';
+                    const selectedAvatarEl = document.getElementById('selectedAvatar');
+                    if (selectedAvatarEl) {
+                        selectedAvatarEl.textContent = selectedAvatar;
+                    }
+                }
+                document.getElementById('usernameSetup').classList.add('hidden');
+                document.getElementById('chatInputArea').classList.remove('hidden');
+                document.getElementById('messageInput').focus();
+            } else {
+                alert('Please enter a username');
+            }
+        }
+        
+        // Send message
+        function sendMessage() {
+            if (!socket) {
+                console.error('Socket not initialized yet');
+                return;
+            }
+            
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && username) {
+                socket.emit('message', {
+                    username: username,
+                    avatar: selectedAvatar,
+                    message: message
+                });
+                input.value = '';
+                socket.emit('typing', { username: username, isTyping: false });
+            }
+        }
+        
+        // Display message
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const time = new Date(message.timestamp).toLocaleTimeString();
+            const avatar = message.avatar || '👤';
+            
+            // Create avatar element separately to ensure emoji renders
+            const avatarSpan = document.createElement('span');
+            avatarSpan.className = 'message-avatar';
+            avatarSpan.textContent = avatar;
+            
+            // Create username span
+            const usernameSpan = document.createElement('span');
+            usernameSpan.className = 'message-username';
+            usernameSpan.appendChild(avatarSpan);
+            usernameSpan.appendChild(document.createTextNode(escapeHtml(message.username)));
+            
+            // Create time span
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'message-time';
+            timeSpan.textContent = time;
+            
+            // Create header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'message-header';
+            headerDiv.appendChild(usernameSpan);
+            headerDiv.appendChild(timeSpan);
+            
+            // Create content
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = message.message;
+            
+            // Assemble message
+            messageDiv.appendChild(headerDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            messagesDiv.appendChild(messageDiv);
+        }
+        
+        // Scroll to bottom
+        function scrollToBottom() {
+            const messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Handle Enter key
+        document.getElementById('usernameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') setUsername();
+        });
+        
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                } else {
+                    if (socket && username) {
+                        socket.emit('typing', { username: username, isTyping: true });
+                        clearTimeout(typingTimeout);
+                        typingTimeout = setTimeout(() => {
+                            if (socket && username) {
+                                socket.emit('typing', { username: username, isTyping: false });
+                            }
+                        }, 1000);
+                    }
+                }
+            });
+        }
+        
+        // Theme functionality
+        function toggleThemeDropdown() {
+            const dropdown = document.getElementById('themeDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        function changeTheme(themeName) {
+            // Remove all theme classes
+            const bodyClasses = document.body.className.split(' ').filter(cls => !cls.startsWith('theme-'));
+            document.body.className = bodyClasses.join(' ');
+            
+            // Add new theme class
+            if (themeName !== 'default') {
+                document.body.classList.add('theme-' + themeName);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('chatTheme', themeName);
+            
+            // Close dropdown if it exists
+            const dropdown = document.getElementById('themeDropdown');
+            if (dropdown) {
+                dropdown.classList.remove('show');
+            }
+        }
+        
+        // Load saved theme on page load
+        function loadSavedTheme() {
+            const savedTheme = localStorage.getItem('chatTheme');
+            if (savedTheme) {
+                changeTheme(savedTheme);
+            }
+        }
+        
+        // Load theme immediately (script is at bottom, so DOM is ready)
+        loadSavedTheme();
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            // Close theme dropdown
+            const themeDropdown = document.getElementById('themeDropdown');
+            const themeButton = document.querySelector('.theme-button');
+            if (themeDropdown && !themeDropdown.contains(e.target) && themeButton && !themeButton.contains(e.target)) {
+                themeDropdown.classList.remove('show');
+            }
+            
+            // Close avatar selector (but not if clicking on emoji or inside the selector)
+            const avatarSelector = document.getElementById('avatarSelector');
+            const selectedAvatar = document.getElementById('selectedAvatar');
+            if (avatarSelector && avatarSelector.classList.contains('show')) {
+                // Check if click is outside both the selector and the button
+                const clickedInsideSelector = avatarSelector.contains(e.target);
+                const clickedOnButton = selectedAvatar && selectedAvatar.contains(e.target);
+                const clickedOnEmoji = e.target.classList.contains('avatar-emoji');
+                
+                if (!clickedInsideSelector && !clickedOnButton && !clickedOnEmoji) {
+                    avatarSelector.classList.remove('show');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

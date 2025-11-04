@@ -40,6 +40,7 @@ io.on('connection', (socket) => {
         const message = {
             id: Date.now(),
             username: data.username || 'Anonymous',
+            avatar: data.avatar || '👤',
             message: data.message,
             timestamp: new Date().toISOString()
         };
