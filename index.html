@@ -599,9 +599,10 @@
                     return;
                 }
                 
-                // Create script tag
+                // Create script tag - use current origin to ensure we load from the same server
                 const script = document.createElement('script');
-                script.src = '/socket.io/socket.io.js';
+                const origin = window.location.origin;
+                script.src = origin + '/socket.io/socket.io.js';
                 script.async = true;
                 
                 script.onload = () => {
@@ -643,7 +644,9 @@
             
             if (typeof io !== 'undefined') {
                 try {
-                    socket = io({
+                    // Use current origin for socket connection
+                    const origin = window.location.origin;
+                    socket = io(origin, {
                         reconnection: true,
                         reconnectionDelay: 1000,
                         reconnectionAttempts: 5
@@ -678,6 +681,15 @@
         
         // Start initialization after page loads
         window.addEventListener('load', () => {
+            // Check if we're on a local server
+            const isLocal = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' ||
+                           /^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(window.location.hostname);
+            
+            if (!isLocal && window.location.protocol === 'https:') {
+                console.warn('Page is being served from HTTPS. Make sure your server is accessible.');
+            }
+            
             loadSocketIO()
                 .then(() => {
                     console.log('Socket.IO library loaded, initializing...');
@@ -690,6 +702,12 @@
                         statusEl.textContent = '✗ Load Error';
                         statusEl.style.color = '#ff6b6b';
                     }
+                    
+                    // Show helpful error message
+                    if (window.location.hostname.includes('github.io') || window.location.hostname.includes('github.com')) {
+                        alert('This page needs to be accessed from your local server (http://localhost:3000), not from GitHub Pages. Please run your Node.js server and access the page through localhost.');
+                    }
+                    
                     // Try to initialize anyway in case it loads later
                     setTimeout(initializeSocket, 500);
                 });
