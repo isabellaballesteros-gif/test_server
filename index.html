@@ -581,29 +581,119 @@
         </div>
     </div>
     
-    <script src="/socket.io/socket.io.js"></script>
     <script>
         // Initialize variables first
         let username = '';
         let selectedAvatar = '👤';
         let typingTimeout;
         let socket = null;
+        let initAttempts = 0;
+        const MAX_INIT_ATTEMPTS = 50; // 5 seconds max (50 * 100ms)
+        
+        // Load Socket.IO script dynamically
+        function loadSocketIO() {
+            return new Promise((resolve, reject) => {
+                // Check if already loaded
+                if (typeof io !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                // Create script tag
+                const script = document.createElement('script');
+                script.src = '/socket.io/socket.io.js';
+                script.async = true;
+                
+                script.onload = () => {
+                    // Wait a bit for io to be available
+                    let checkCount = 0;
+                    const checkIO = setInterval(() => {
+                        if (typeof io !== 'undefined') {
+                            clearInterval(checkIO);
+                            resolve();
+                        } else if (checkCount++ > 20) {
+                            clearInterval(checkIO);
+                            reject(new Error('Socket.IO library loaded but io is not defined'));
+                        }
+                    }, 50);
+                };
+                
+                script.onerror = () => {
+                    reject(new Error('Failed to load Socket.IO library'));
+                };
+                
+                document.head.appendChild(script);
+            });
+        }
         
         // Initialize Socket.IO after the script loads
         function initializeSocket() {
+            initAttempts++;
+            
+            if (initAttempts > MAX_INIT_ATTEMPTS) {
+                console.error('Failed to initialize Socket.IO after multiple attempts');
+                const statusEl = document.getElementById('connectionStatus');
+                if (statusEl) {
+                    statusEl.textContent = '✗ Connection Failed';
+                    statusEl.style.color = '#ff6b6b';
+                }
+                alert('Failed to connect to server. Please refresh the page.');
+                return;
+            }
+            
             if (typeof io !== 'undefined') {
-                socket = io();
-                setupSocketListeners();
-                
-                // Also set up listeners immediately in case socket connects quickly
-                socket.on('connect', () => {
-                    setupMessageInputListeners();
-                });
+                try {
+                    socket = io({
+                        reconnection: true,
+                        reconnectionDelay: 1000,
+                        reconnectionAttempts: 5
+                    });
+                    
+                    setupSocketListeners();
+                    
+                    // Set up listeners when connected
+                    socket.on('connect', () => {
+                        setupMessageInputListeners();
+                        console.log('Socket.IO connected successfully');
+                    });
+                    
+                    socket.on('connect_error', (error) => {
+                        console.error('Connection error:', error);
+                        const statusEl = document.getElementById('connectionStatus');
+                        if (statusEl) {
+                            statusEl.textContent = '✗ Connection Error';
+                            statusEl.style.color = '#ff6b6b';
+                        }
+                    });
+                    
+                } catch (error) {
+                    console.error('Error initializing socket:', error);
+                    setTimeout(initializeSocket, 200);
+                }
             } else {
                 // Retry if Socket.IO hasn't loaded yet
                 setTimeout(initializeSocket, 100);
             }
         }
+        
+        // Start initialization after page loads
+        window.addEventListener('load', () => {
+            loadSocketIO()
+                .then(() => {
+                    console.log('Socket.IO library loaded, initializing...');
+                    initializeSocket();
+                })
+                .catch((error) => {
+                    console.error('Error loading Socket.IO:', error);
+                    const statusEl = document.getElementById('connectionStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '✗ Load Error';
+                        statusEl.style.color = '#ff6b6b';
+                    }
+                    // Try to initialize anyway in case it loads later
+                    setTimeout(initializeSocket, 500);
+                });
+        });
         
         // Setup socket event listeners
         function setupSocketListeners() {
@@ -690,12 +780,7 @@
             }
         }
         
-        // Start Socket.IO initialization
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeSocket);
-        } else {
-            initializeSocket();
-        }
+        // Initialization is now handled by window.load event above
         
         // Emoji collections
         const emojiCategories = {
