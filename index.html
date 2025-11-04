@@ -611,6 +611,8 @@
                     statusEl.textContent = '✓ Connected';
                     statusEl.style.color = '#90EE90';
                 }
+                // Setup message input event listeners after connection
+                setupMessageInputListeners();
             });
             
             socket.on('disconnect', () => {
@@ -652,6 +654,33 @@
                     typingDiv.remove();
                 }
             });
+        }
+        
+        // Setup message input event listeners
+        function setupMessageInputListeners() {
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                // Remove any existing listeners by cloning the element
+                const newInput = messageInput.cloneNode(true);
+                messageInput.parentNode.replaceChild(newInput, messageInput);
+                
+                // Add event listeners
+                newInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    } else {
+                        if (socket && username) {
+                            socket.emit('typing', { username: username, isTyping: true });
+                            clearTimeout(typingTimeout);
+                            typingTimeout = setTimeout(() => {
+                                if (socket && username) {
+                                    socket.emit('typing', { username: username, isTyping: false });
+                                }
+                            }, 1000);
+                        }
+                    }
+                });
+            }
         }
         
         // Start Socket.IO initialization
@@ -722,6 +751,8 @@
                 username = name;
                 document.getElementById('usernameSetup').classList.add('hidden');
                 document.getElementById('chatInputArea').classList.remove('hidden');
+                // Setup message input listeners when chat area becomes visible
+                setupMessageInputListeners();
                 document.getElementById('messageInput').focus();
             }
         }
@@ -803,23 +834,11 @@
             return div.innerHTML;
         }
         
-        // Handle Enter key
-        document.getElementById('usernameInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') setUsername();
-        });
-        
-        const messageInput = document.getElementById('messageInput');
-        if (messageInput) {
-            messageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    sendMessage();
-                } else {
-                    socket.emit('typing', { username: username, isTyping: true });
-                    clearTimeout(typingTimeout);
-                    typingTimeout = setTimeout(() => {
-                        socket.emit('typing', { username: username, isTyping: false });
-                    }, 1000);
-                }
+        // Handle Enter key for username input
+        const usernameInput = document.getElementById('usernameInput');
+        if (usernameInput) {
+            usernameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') setUsername();
             });
         }
         
